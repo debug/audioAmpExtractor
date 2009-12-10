@@ -1,0 +1,165 @@
+/*
+#	The MIT License
+#
+#	Copyright (c) 2009 Dominic Drane
+#
+#	Permission is hereby granted, free of charge, to any person obtaining a copy
+#	of this software and associated documentation files (the "Software"), to deal
+#	in the Software without restriction, including without limitation the rights
+#	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#	copies of the Software, and to permit persons to whom the Software is
+#	furnished to do so, subject to the following conditions:
+#
+#	The above copyright notice and this permission notice shall be included in
+#	all copies or substantial portions of the Software.
+#
+#	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#	THE SOFTWARE.
+#
+#	audioAmplitudeExtrator Maya Python plug-in
+#
+#	Author: Dominic Drane
+#		www.reality-debug.co.uk
+#		dom@reality-debug.co.uk
+#
+#	Version .9
+#	Release date: 18/10/09
+#
+#	Usage: See readme.txt for details/limitations.
+#	Video tutorial available online at www.reality-debug.co.uk/files
+#	
+*/
+
+
+global proc createWaveFormUI(){
+
+	string $window = `window -title "Curve Plotter"
+       -iconName "Plot Curve"
+       -widthHeight 388 330 -sizeable true waveformCurveUI`;
+       		menuBarLayout;
+		
+			menu -label "Help";
+			menuItem -label "Show Help" -command "launchOnlineHelp()";
+			menuItem -divider 1;
+			menuItem -label "About" -command "aboutAudioAmpExtractor()";
+			
+	string $form = `formLayout -numberOfDivisions 100`;
+		
+
+			
+		
+      	string $plotButton = `button -label "Plot Curve" -enable false -width 10 -height 40 -command "plotWaveForm()" plotCurveButton`;
+      	
+       	string $loadObjectButton = `button - label "Load Object" -width 10 -height 40 -command "populateSelectionAttrs()"`;
+       	
+       	string $closeButton = `button -label "Close" -width 10 -height 40 -command ("deleteUI -window " + $window)`;
+       	
+       	string $textObjectAttrList = `textScrollList  -allowMultiSelection true -width 370 -height 200 attrListAll`;
+       	
+		string $checkBox = `checkBox -visible true -label "Simplify Curve" simplifySelection`;
+
+		string $separator = `separator -style "double"-width 395`;
+
+formLayout -edit
+			
+			-attachForm $separator "top" 220
+			-attachPosition $separator "left" 0 0
+			
+			-attachForm $closeButton "bottom" 5
+			-attachForm $closeButton "right" 2
+			-attachForm $closeButton "left" 260
+			-attachNone $closeButton "top"
+			
+			
+			-attachForm $plotButton "bottom" 5
+			-attachForm $plotButton "left" 2
+			-attachForm $plotButton "right" 260
+			-attachNone $plotButton "top"
+			
+			
+			-attachForm $loadObjectButton "bottom" 5
+			-attachForm $loadObjectButton "right" 131
+			-attachForm $loadObjectButton "left" 131
+			-attachNone $loadObjectButton "top"
+			
+			
+			-attachForm $textObjectAttrList "left" 10
+			-attachForm $textObjectAttrList "top" 10
+			-attachNone $textObjectAttrList "bottom"
+			-attachNone $textObjectAttrList "right"
+
+
+
+			-attachForm $checkBox "left" 137
+			-attachForm $checkBox "top" 233
+			-attachNone $checkBox "bottom"
+			-attachNone $checkBox "right"
+			
+			
+			
+			$form;
+
+	showWindow $window;
+		
+}	
+
+
+global proc populateSelectionAttrs(){
+	
+	string $selection[] = `ls -selection`;
+	string $firstSelection = $selection[0];
+	string $allKeyableAttrs[] = `listAttr -s -k $firstSelection`;
+	textScrollList -edit -visible true -removeAll attrListAll;
+
+	
+	button -edit -enable true plotCurveButton;
+	
+	
+	
+		for($i = 0; $i < size($allKeyableAttrs); $i++) {
+		textScrollList -e -append $allKeyableAttrs[$i] attrListAll;
+	}
+	
+}
+
+global proc launchOnlineHelp(){
+	launch -web "http://www.reality-debug.co.uk/files";
+}
+
+global proc aboutAudioAmpExtractor(){
+	print "Audio Amplitude Extractor v.5b by Dominic Drane (dom@reality-debug.co.uk)";
+	launch -web "http://www.reality-debug.co.uk";
+}
+
+global proc plotWaveForm(){
+	string $currentObject[] = `ls -sl`;
+	int $simplifiedSelectionChoice = `checkBox -query -value simplifySelection`;
+	string $allTheItems[] = `textScrollList -query -allItems attrListAll`;
+	
+	int $sizeArray = `textScrollList -query -numberOfSelectedItems attrListAll`;
+	
+	int $soundSize = `getAttr audioAmpNode1.soundSize`;
+	
+	string $selectionListReturn[] = `textScrollList -query -selectItem attrListAll`;
+	
+	for($j = 0; $j < $sizeArray; $j++){
+	
+		for($i = 0; $i < $soundSize; $i++){
+			float $currentAmp = `getAttr audioAmpNode1.amplitude`;
+		
+			currentTime  -edit $i;
+			setKeyframe -v $currentAmp -at $selectionListReturn[$j];
+		}
+	filterCurve -f simplify -timeTolerance 0.04  {($currentObject[0] + "." + $selectionListReturn[$j])};
+	if($simplifiedSelectionChoice == 1){		
+		filterCurve -f simplify -timeTolerance 0.05  {($currentObject[0] + "." + $selectionListReturn[$j])};
+	}
+	}
+	
+}
+

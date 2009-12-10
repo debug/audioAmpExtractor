@@ -1,0 +1,122 @@
+/*
+#	The MIT License
+#
+#	Copyright (c) 2009 Dominic Drane
+#
+#	Permission is hereby granted, free of charge, to any person obtaining a copy
+#	of this software and associated documentation files (the "Software"), to deal
+#	in the Software without restriction, including without limitation the rights
+#	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#	copies of the Software, and to permit persons to whom the Software is
+#	furnished to do so, subject to the following conditions:
+#
+#	The above copyright notice and this permission notice shall be included in
+#	all copies or substantial portions of the Software.
+#
+#	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#	THE SOFTWARE.
+#
+#	audioAmplitudeExtrator Maya Python plug-in
+#
+#	Author: Dominic Drane
+#		www.reality-debug.co.uk
+#		dom@reality-debug.co.uk
+#
+#	Version .9
+#	Release date: 18/10/09
+#
+#	Usage: See readme.txt for details/limitations.
+#	Video tutorial available online at www.reality-debug.co.uk/files
+#	
+*/
+
+source "waveFormUI.mel";
+
+
+global proc AEaudioAmpNodeTemplate( string $nodeName )
+{
+	editorTemplate -suppress "inputTranslate";
+	editorTemplate -suppress "input";
+	editorTemplate -suppress "caching";
+	editorTemplate -suppress "nodeState";
+	editorTemplate -suppress "soundSize";
+	
+	editorTemplate -beginScrollLayout;
+
+	editorTemplate -beginLayout "Audio Amplitude Attributes" -collapse false; 	
+	editorTemplate -beginNoOptimize;
+	
+	editorTemplate -callCustom 	"audioAmpNodeUINew"
+								"audioAmpNodeUIReplace"
+								"file";
+	
+	editorTemplate -addControl "exponent";
+
+	editorTemplate -addSeparator;
+	editorTemplate -addControl "time";
+	editorTemplate -addControl "offset";
+	editorTemplate -addControl "amplitude";
+	
+	editorTemplate -addSeparator;
+	editorTemplate -callCustom "plotButtonProc" "plotButtonProcReplace" "file";
+	
+	
+	editorTemplate -endLayout;
+	editorTemplate -endScrollLayout;
+
+	expression -s "audioAmpNode1.time = frame;"  -o audioAmpNode1 -ae 1 -uc all;
+}
+
+
+
+global proc plotButtonProc(string $attrName){
+	button -label "Plot Curve"  -width 50 -command "createWaveFormUI()" -enable false plotButton;
+	button -label "Online help"  -width 50 -command "launchOnlineHelp()" -enable true helpButton;
+}
+
+
+global proc plotButtonProcReplace(string $attrName){
+}
+
+
+global proc getWaveFile(){
+	fileBrowserDialog -m 0 -fc "passWaveFilePath" -ft "audio" -actionName "Import" -om "Import";
+	button -edit -enable true plotButton;
+}
+
+
+global proc int passWaveFilePath( string $filename, string $fileType ){
+    global string $gPlayBackSlider;
+    textField -edit -fileName $filename waveFileAddress;
+    setAttr -type "string" audioAmpNode1.file $filename;
+    sound -file $filename -name "audioWaveform";
+    timeControl -e -displaySound true -sound "audioWaveform" $gPlayBackSlider;
+    select -r audioAmpNode1 ;
+    expression -s "audioWaveform.offset = audioAmpNode1.offset;"  -o audioWaveform -ae 1 -uc all;
+    return 1;
+}
+
+
+
+global proc audioAmpNodeUINew ( string $fileAttribute ){
+	
+	setUITemplate -pst attributeEditorTemplate;
+	
+	rowLayout -nc 4;
+		text -label "Filename"  filenameName;
+		textField  -fileName "" waveFileAddress;
+		symbolButton -image "navButtonBrowse.xpm" -command "getWaveFile()" browseSoundfiles;
+		setParent ..;
+
+}
+
+global proc int audioAmpNodeUIReplace ( string $fileAttribute )
+{
+	return true; 
+}
+
